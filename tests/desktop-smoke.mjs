@@ -1,5 +1,5 @@
 // Native Electron integration checks. Uses an isolated data directory, never the user's progress.
-import {app,BrowserWindow} from 'electron';
+import {app,BrowserWindow,clipboard} from 'electron';
 import {mkdtemp,writeFile,readFile,mkdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -8,6 +8,7 @@ const testData=await mkdtemp(join(tmpdir(),'fieldwork-desktop-test-'));
 app.setPath('userData',testData);
 await import('../dist-electron/main.js');
 void app.whenReady().then(async()=>{
+const originalClipboard=await clipboard.readText();
 const sleep=n=>new Promise(r=>setTimeout(r,n));
 const until=async(fn,message)=>{for(let i=0;i<160;i++){if(await fn())return;await sleep(100);}throw new Error(message);};
 try{
@@ -49,6 +50,24 @@ try{
  await until(async()=>(await text()).includes('--VISUAL--'),'Vim Visual mode did not activate');
  await keypress('Escape');
  console.log('PASS: Vim Insert/Normal/Visual modes, gg, dd, undo, o newline, and autosave');
+ const beforePaste=JSON.parse(await js('window.fieldwork.load()')).active.code;
+ const pasted='// clipboard test\n'+beforePaste;
+ await clipboard.writeText(pasted);
+ await click('[data-action="select-code"]');await click('[data-action="paste-code"]');
+ await until(async()=>JSON.parse(await js('window.fieldwork.load()')).active.code===pasted,'Paste button did not replace selected code');
+ await click('[data-action="copy-code"]');
+ await until(async()=>(await clipboard.readText())===pasted,'Copy button did not copy the whole solution');
+ await js('document.querySelector(".monaco-editor textarea").focus()');await keypress('u');
+ await until(async()=>JSON.parse(await js('window.fieldwork.load()')).active.code===beforePaste,'Pasting was not undoable');
+ const systemKey=async key=>{win.webContents.sendInputEvent({type:'keyDown',keyCode:key,modifiers:[process.platform==='darwin'?'meta':'control']});win.webContents.sendInputEvent({type:'keyUp',keyCode:key,modifiers:[process.platform==='darwin'?'meta':'control']});await sleep(100);};
+ await systemKey('a');await systemKey('c');
+ await until(async()=>(await clipboard.readText())===beforePaste,'System select-all / copy shortcuts failed in Vim');
+ await clipboard.writeText(pasted);await systemKey('v');
+ await until(async()=>JSON.parse(await js('window.fieldwork.load()')).active.code===pasted,'System paste shortcut failed in Vim');
+ await keypress('u');
+ await until(async()=>JSON.parse(await js('window.fieldwork.load()')).active.code===beforePaste,'System paste was not undoable');
+ console.log('PASS: copy/paste buttons, system shortcuts in Vim, selection replacement and undo');
+
  await js(`document.querySelector('#notes').value='Smoke test: maintain an invariant'; document.querySelector('#notes').dispatchEvent(new Event('input',{bubbles:true}));`);
  await click('[data-action="pause"]');
  const before=await js('document.querySelector("#timer").textContent');await sleep(1100);assert.equal(await js('document.querySelector("#timer").textContent'),before);
@@ -91,16 +110,22 @@ try{
  assert.match(await text(),/1 matching problems/);
  console.log('PASS: catalog search');
  await click('[data-view="settings"]');
- await click('[data-action="sync"]');
+ assert.equal(await js('document.querySelector("#handle").disabled'),false);
+ await js('document.querySelector("#handle").value="bad handle";document.querySelector("#handle").dispatchEvent(new Event("input",{bubbles:true}));document.querySelector("#handle").dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));');
+ assert.match(await text(),/Enter a valid Codeforces handle/);
+ const trackedHandle=JSON.parse(await js('window.fieldwork.load()')).profile.handle;
+ await js(`document.querySelector('#handle').value=${JSON.stringify(' marcellus_at_syracuse ')};document.querySelector('#handle').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('#handle').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));`);
  await until(async()=>(await text()).includes('Synced 31 accepted')||(await text()).includes('Synced 32 accepted')||!(await text()).includes('Syncing…'),'Account sync timeout');
  const saved=JSON.parse(await js('window.fieldwork.load()'));
  assert.ok(saved.logs.length===1&&saved.logs[0].outcome==='assisted');
  assert.ok(saved.logs[0].code.includes('int main'));
  assert.ok(Object.keys(saved.profile.accepted).length>0,'Codeforces sync did not return acceptance timestamps');
- console.log('PASS: live Codeforces sync, disk persistence and saved C++ source');
+ assert.equal(saved.profile.handle,trackedHandle);
+ console.log('PASS: editable handle, Enter to sync, validation, disk persistence and saved C++ source');
  assert.equal(errors.length,0,errors.join('\n'));
  console.log('Native integration checks passed. Screenshots saved in artifacts/.');
+ await clipboard.writeText(originalClipboard);
  app.exit(0);
-}catch(e){console.error(e);app.exit(1);}
+}catch(e){await clipboard.writeText(originalClipboard);console.error(e);app.exit(1);}
 
 });

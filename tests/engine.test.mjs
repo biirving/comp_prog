@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders} from '../src/engine.ts';
+import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile} from '../src/engine.ts';
 import {topics} from '../src/topics.ts';
 const seed=JSON.parse(await readFile(new URL('../public/seed.json',import.meta.url)));
 const catalog=JSON.parse(await readFile(new URL('../public/catalog.json',import.meta.url))).problems;
@@ -21,3 +21,15 @@ test('acceptance must occur after session start, including reviews',()=>{const s
 test('timer uses wall-clock deltas and pauses exactly',()=>{assert.equal(elapsed({elapsed:10,runningSince:1000},6000),15);assert.equal(elapsed({elapsed:10,runningSince:null},999999),10);});
 test('backup validation rejects corrupt progress',()=>{const s=fresh();assert.equal(validState(s),true);assert.equal(validState({...s,logs:[{id:'bad'}]}),false);assert.equal(validState({...s,initialBand:5000}),false);assert.equal(validState({...s,active:{problemId:'x'}}),false);});
 test('sparse bands use the next supported rating without inventing earned credit',()=>{const s=fresh();s.bands=ratingLadders(catalog);assert.equal(progress(s,'dsu').band,1100);assert.equal(progress(s,'dsu').cleared,null);for(const t of topics){const band=progress(s,t.id).band;const n=catalog.filter(p=>p.rating===band&&p.tags.some(tag=>t.tags.includes(tag))).length;assert.ok(n>=3,`${t.name} only has ${n} problems at ${band}`);}});
+
+test('switching handles isolates verification and restores prior practice',()=>{
+ const s=fresh();const original=structuredClone(s.profile);s.logs=[log({verified:false})];
+ s.active={problemId:'100B',topicId:'implementation',rating:800,startedAt:1000,elapsed:5,runningSince:1000,duration:30,review:false,help:false,notes:'keep me',checks:[false,false,false],code:'int main(){}'};
+ trackProfile(s,{...original,handle:'another_user',accepted:{'100A':300000}},6000);
+ assert.equal(s.logs.length,0);assert.equal(s.active,null);assert.equal(s.accounts[original.handle].logs[0].verified,false);
+ s.logs=[log({problemId:'200A'})];trackProfile(s,original,7000);
+ assert.equal(s.logs[0].problemId,'100A');assert.equal(s.logs[0].verified,false);assert.equal(s.active.notes,'keep me');assert.equal(s.active.elapsed,10);assert.equal(s.active.runningSince,null);
+ assert.equal(s.accounts.another_user.logs[0].problemId,'200A');assert.equal(validState(s),true);
+});
+test('case-only handle updates do not reset progress',()=>{const s=fresh();s.logs=[log()];trackProfile(s,{...s.profile,handle:s.profile.handle.toUpperCase()});assert.equal(s.logs.length,1);assert.equal(s.accounts,undefined);});
+test('corrupt account archives are rejected on import',()=>{const s=fresh();assert.equal(validState({...s,accounts:{broken:{logs:[{bad:true}]}}}),false);});

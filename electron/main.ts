@@ -35,7 +35,8 @@ app.whenReady().then(async () => {
  });
  session.defaultSession.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
  ipcMain.handle('cpp:check',async(event,code:unknown)=>{trusted(event);return checkCpp(code);});
- ipcMain.handle('code:copy',async(event,code:unknown)=>{trusted(event);if(typeof code!=='string'||code.length>500000)throw new Error('Invalid source');clipboard.writeText(code);});
+ ipcMain.handle('code:copy',async(event,code:unknown)=>{trusted(event);if(typeof code!=='string'||code.length>500000)throw new Error('Invalid source');await clipboard.writeText(code);});
+ ipcMain.handle('code:paste',async event=>{trusted(event);const text=await clipboard.readText();if(text.length>500000)throw new Error('Clipboard text must be under 500 KB.');return text;});
  ipcMain.handle('state:load',async event=>{trusted(event);try{return await readFile(path.join(app.getPath('userData'),'progress.json'),'utf8');}catch(e){if((e as NodeJS.ErrnoException).code==='ENOENT')return null;throw e;}});
  ipcMain.handle('state:save',(event,json: unknown)=>{
   trusted(event);if(typeof json!=='string'||json.length>20_000_000)throw new Error('Invalid progress file');

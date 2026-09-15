@@ -29,6 +29,8 @@ Open `release/Fieldwork-darwin-arm64/Fieldwork.app`. This is a local unsigned bu
 4. Click **Sync acceptance** after judging finishes. This links public submission results to your attempt.
 5. Finish and reflect. Indicate independent / assisted / unfinished and the main blocker. The next review is scheduled automatically.
 
+The Progress screen has a Continue practice button that starts the next recommended problem, or a Resume session button for unfinished work.
+
 The timer can pause, survive a restart, or extend by 15 minutes. Leaving the focus view pauses it. A running timer restored after a crash counts elapsed wall time up to restoration, then pauses. The app stores notes and C++ source with completed attempts.
 
 ## Strict category progression
@@ -52,6 +54,7 @@ The practice bands are evidence of this training process, not predictions of con
 
 ## C++ support
 
+- **Copy code**, **Paste code**, and **Select all** buttons are beside the editor. Copy copies the entire solution; Paste replaces the selection or inserts at the cursor and can be undone. System Cmd/Ctrl+A, C, and V shortcuts work in both Vim Normal and Insert modes.
 - Vim keybindings enabled by default: Normal/Insert/Visual modes, motions, operators, search, and undo. Press `i` to insert and `Esc` to return to Normal mode. Code autosaves as you edit.
 - Monaco editor with highlighting, bracket pairing, find, keyword completion, and C++ snippets (`Ctrl+Space`).
 - Local Clang C++17 syntax/type diagnostics with error markers. **No executable is run** by this check.
@@ -63,7 +66,9 @@ The practice bands are evidence of this training process, not predictions of con
 
 Electron saves progress atomically in `app.getPath('userData')/progress.json` (normally `~/Library/Application Support/fieldwork/` for a development launch). Export a JSON backup from Settings. Import validates the file and asks before replacing progress. No analytics, backend account, or hosted database is used.
 
-**Sync Codeforces** uses the public `user.info` and paginated `user.status` APIs. Requests are serialized with at least 2.1 seconds between calls. **Refresh official ratings** uses `problemset.problems`. The catalog is cached for offline browsing. Network errors preserve saved state. Logged attempts keep their original problem rating when the catalog changes.
+In Settings, enter a username and press **Enter** or **Save handle & sync**. The username stays editable after practice starts. Each handle keeps separate sessions, code, notes, and progression; switching back restores that account’s saved work. A failed sync leaves the tracked account unchanged.
+
+**Save handle & sync** uses the public `user.info` and paginated `user.status` APIs. Requests are serialized with at least 2.1 seconds between calls. **Refresh official ratings** uses `problemset.problems`. The catalog is cached for offline browsing. Network errors preserve saved state. Logged attempts keep their original problem rating when the catalog changes.
 
 The desktop process exposes narrow IPC methods, uses a sandboxed renderer with Node integration disabled, validates senders, serves bundled assets through a custom secure protocol, and restricts external links to known HTTPS domains.
 

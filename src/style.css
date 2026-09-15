@@ -3,3 +3,5 @@
 .vim-status{min-height:30px;padding:6px 12px;border:1px solid #364631;border-top:0;border-radius:0 0 7px 7px;background:#202d21;color:#c5dda9;font:11px/1.6 Menlo,Monaco,monospace}.vim-status input{padding:0 5px;border:0;outline:none;background:transparent;color:inherit;font:inherit;min-width:200px}.vim-status .vim-notification{margin-left:12px}.code-editor:has(+.vim-status){border-radius:7px 7px 0 0}
 
 .continue-card{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-bottom:24px;background:#253627;border-color:#506743}.continue-card h2{margin:9px 0 5px;font-size:20px}.continue-card p{font-size:12px}.continue-card .tiny-label{color:#b8d29f}@media(max-width:700px){.continue-card{align-items:stretch;flex-direction:column;gap:17px}.continue-card .button{width:100%}}
+
+.profile>div:not(.avatar){min-width:0;flex:1}.profile strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.clipboard-hint{font-size:10px;color:#98ac89;margin:8px 0 14px}.editor-actions{row-gap:8px}

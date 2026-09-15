@@ -1,5 +1,5 @@
 import {topics} from './topics.ts';
-import type {State,Log,Problem,Topic,Active} from './types.ts';
+import type {State,Log,Problem,Topic,Active,Profile} from './types.ts';
 export const DAY=86400000;
 export const key=(p:{contestId:number;index:string})=>`${p.contestId}${p.index}`;
 export const qualified=(l:Log)=>l.outcome==='independent'&&!l.help&&l.verified&&l.seconds<=25*60&&l.checks.every(Boolean)&&l.checks.length===3;
@@ -65,10 +65,23 @@ export function localDay(timestamp:number){const d=new Date(timestamp);return `$
 export function verifyLogs(state:State){
  for(const l of state.logs){if((state.profile.accepted[l.problemId]||0)>=l.startedAt)l.verified=true;}
 }
+export function trackProfile(state:State,profile:Profile,now=Date.now()){
+ const previous=state.profile.handle.toLowerCase(),next=profile.handle.toLowerCase();
+ if(previous!==next){
+  if(state.active){state.active.elapsed=elapsed(state.active,now);state.active.runningSince=null;}
+  state.accounts={...state.accounts,[previous]:structuredClone({initialBand:state.initialBand,logs:state.logs,active:state.active,deferred:state.deferred})};
+  const restored=Object.hasOwn(state.accounts,next)?state.accounts[next]:null;
+  state.initialBand=restored?.initialBand??800;state.logs=structuredClone(restored?.logs??[]);
+  state.active=structuredClone(restored?.active??null);state.deferred={...restored?.deferred};
+  if(state.active)state.active.runningSince=null;
+ }
+ state.profile=profile;verifyLogs(state);
+}
 export function validState(value:unknown):value is State {
  if(!value||typeof value!=='object')return false;const s=value as State;
  const validCatalog=!s.catalog||(typeof s.catalog.updatedAt==='string'&&Number.isFinite(Date.parse(s.catalog.updatedAt))&&Array.isArray(s.catalog.problems)&&s.catalog.problems.length>0&&s.catalog.problems.every(p=>typeof p.id==='string'&&typeof p.name==='string'&&Number.isFinite(p.contestId)&&typeof p.index==='string'&&Number.isFinite(p.rating)&&Number.isFinite(p.solvedCount)&&Array.isArray(p.tags)&&p.tags.every(t=>typeof t==='string')));
- return validCatalog&&s.version===1&&[30,45,60].includes(s.duration)&&[800,900,1000].includes(s.initialBand)&&Array.isArray(s.logs)&&s.logs.every(l=>
+ const validAccounts=s.accounts===undefined||!!s.accounts&&typeof s.accounts==='object'&&!Array.isArray(s.accounts)&&Object.entries(s.accounts).every(([handle,account])=>/^[a-zA-Z0-9_.-]{3,24}$/.test(handle)&&!!account&&validState({...s,...account,accounts:undefined,catalog:undefined}));
+ return validAccounts&&validCatalog&&s.version===1&&[30,45,60].includes(s.duration)&&[800,900,1000].includes(s.initialBand)&&Array.isArray(s.logs)&&s.logs.every(l=>
   typeof l.id==='string'&&typeof l.problemId==='string'&&topics.some(t=>t.id===l.topicId)&&Number.isFinite(l.rating)&&Number.isFinite(l.startedAt)&&Number.isFinite(l.finishedAt)&&l.finishedAt>=l.startedAt&&Number.isFinite(l.seconds)&&l.seconds>=0&&['independent','assisted','stuck'].includes(l.outcome)&&typeof l.notes==='string'&&typeof l.blocker==='string'&&typeof l.help==='boolean'&&typeof l.review==='boolean'&&typeof l.verified==='boolean'&&Array.isArray(l.checks)&&l.checks.length===3&&l.checks.every(x=>typeof x==='boolean'))&&
   !!s.profile&&typeof s.profile.handle==='string'&&Number.isFinite(Date.parse(s.profile.syncedAt))&&Array.isArray(s.profile.solved)&&s.profile.solved.every(p=>Number.isFinite(p.contestId)&&typeof p.index==='string'&&Array.isArray(p.tags)&&p.tags.every(t=>typeof t==='string'))&&!!s.profile.accepted&&typeof s.profile.accepted==='object'&&Object.values(s.profile.accepted).every(Number.isFinite)&&!!s.deferred&&typeof s.deferred==='object'&&Object.values(s.deferred).every(Number.isFinite)&&
   (s.active===null||!!s.active&&typeof s.active.problemId==='string'&&topics.some(t=>t.id===s.active!.topicId)&&Number.isFinite(s.active.rating)&&Number.isFinite(s.active.startedAt)&&Number.isFinite(s.active.elapsed)&&s.active.elapsed>=0&&(s.active.runningSince===null||Number.isFinite(s.active.runningSince))&&Number.isFinite(s.active.duration)&&typeof s.active.notes==='string'&&typeof s.active.help==='boolean'&&typeof s.active.review==='boolean'&&Array.isArray(s.active.checks)&&s.active.checks.length===3&&s.active.checks.every(x=>typeof x==='boolean'));

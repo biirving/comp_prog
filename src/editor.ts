@@ -6,6 +6,7 @@ import 'monaco-editor/editor/contrib/bracketMatching/browser/bracketMatching';
 import 'monaco-editor/editor/contrib/hover/browser/hoverContribution';
 import 'monaco-editor/editor/contrib/find/browser/findController';
 import 'monaco-editor/editor/contrib/linesOperations/browser/linesOperations';
+import 'monaco-editor/editor/contrib/clipboard/browser/clipboard';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import type {CompileResult} from './types';
 import {initVimMode, type VimAdapterInstance} from 'monaco-vim';
@@ -34,7 +35,23 @@ let editor:monaco.editor.IStandaloneCodeEditor|null=null;
 let vim:VimAdapterInstance|null=null;
 let vimStatus:HTMLElement|null=null;
 export function disposeEditor(){vim?.dispose();vim=null;vimStatus?.remove();vimStatus=null;if(editor){const model=editor.getModel();editor.dispose();model?.dispose();editor=null;}}
-export function mountEditor(container:HTMLElement,code:string,onChange:(code:string)=>void){
+export async function copyCode(text:string){
+ if(window.fieldwork)await window.fieldwork.copy(text);else await navigator.clipboard.writeText(text);
+}
+export async function pasteCode(){
+ const target=editor,model=target?.getModel(),selection=target?.getSelection();
+ if(!target||!model||!selection)return;
+ const version=model.getVersionId();
+ const text=window.fieldwork?await window.fieldwork.readClipboard():await navigator.clipboard.readText();
+ if(!text)throw new Error('Your clipboard has no text to paste.');
+ if(editor!==target||model.getVersionId()!==version)throw new Error('The editor changed. Paste again at your current cursor.');
+ if(model.getValueLength()-model.getValueInRange(selection).length+text.length>500000)throw new Error('Code must be under 500 KB.');
+ const offset=model.getOffsetAt(selection.getStartPosition());
+ target.pushUndoStop();target.executeEdits('clipboard',[{range:selection,text,forceMoveMarkers:true}]);target.pushUndoStop();
+ target.setPosition(model.getPositionAt(offset+text.length));target.focus();
+}
+export function selectAllCode(){const model=editor?.getModel();if(model){editor!.setSelection(model.getFullModelRange());editor!.focus();}}
+export function mountEditor(container:HTMLElement,code:string,onChange:(code:string)=>void,onMessage:(message:string)=>void=()=>{}){
  disposeEditor();editor=monaco.editor.create(container,{value:code,editContext:false,language:'cpp',theme:'fieldwork',fontSize:12,fontFamily:'Menlo, Monaco, monospace',minimap:{enabled:false},automaticLayout:true,scrollBeyondLastLine:false,padding:{top:16},tabSize:4,bracketPairColorization:{enabled:true},quickSuggestions:true,wordBasedSuggestions:'currentDocument',fixedOverflowWidgets:true});
  editor.onDidChangeModelContent(()=>onChange(editor!.getValue()));
  vimStatus=document.createElement('div');
@@ -42,5 +59,19 @@ export function mountEditor(container:HTMLElement,code:string,onChange:(code:str
  vimStatus.setAttribute('aria-label','Vim mode and command line');
  container.insertAdjacentElement('afterend',vimStatus);
  vim=initVimMode(editor,vimStatus);
+ // Keep standard system clipboard shortcuts available in both Normal and Insert mode.
+ const dom=editor.getDomNode()!;
+ const mac=/Mac|iPhone|iPad/.test(navigator.platform);
+ const clipboardKey=(event:KeyboardEvent)=>{
+  if(!(mac?event.metaKey:event.ctrlKey)||event.altKey||event.shiftKey)return;
+  const key=event.key.toLowerCase();if(!['a','c','v'].includes(key))return;
+  event.preventDefault();event.stopImmediatePropagation();
+  if(key==='a'){selectAllCode();return;}
+  if(key==='v'){void pasteCode().catch(e=>onMessage(e.message));return;}
+  const model=editor?.getModel(),selection=editor?.getSelection();
+  if(model&&selection)void copyCode(selection.isEmpty()?model.getValue():model.getValueInRange(selection)).catch(()=>onMessage('Could not access the clipboard. Use Copy code.'));
+ };
+ dom.addEventListener('keydown',clipboardKey,true);
+ editor.onDidDispose(()=>dom.removeEventListener('keydown',clipboardKey,true));
 }
 export function showDiagnostics(result:CompileResult){const model=editor?.getModel();if(!model)return;monaco.editor.setModelMarkers(model,'compiler',result.diagnostics.map(d=>({startLineNumber:d.line,endLineNumber:d.line,startColumn:d.column,endColumn:d.column+1,message:d.message,severity:d.severity==='error'?monaco.MarkerSeverity.Error:monaco.MarkerSeverity.Warning})));}
