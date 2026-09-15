@@ -70,6 +70,18 @@ try{
  assert.equal(await js('document.querySelector("#outcome").value'),'assisted');
  await click('[data-action="save-result"]');
  await until(async()=>(await text()).includes('Used help'),'Result was not saved');
+ assert.match(await js('document.querySelector(".continue-card").innerText'),/Continue practice/);
+ await js('window.scrollTo(0,0)');
+ await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+ await writeFile('artifacts/progress.png',(await win.webContents.capturePage()).toPNG());
+ await click('.continue-card [data-action="start"]');
+ await until(async()=>(await text()).includes('C++ workspace'),'Continue practice did not open the next problem');
+ const continued=JSON.parse(await js('window.fieldwork.load()')).active.problemId;
+ await click('[data-view="journal"]');
+ assert.match(await js('document.querySelector(".continue-card").innerText'),/Resume session/);
+ await click('.continue-card [data-action="start"]');
+ await until(async()=>{const a=JSON.parse(await js('window.fieldwork.load()')).active;return a.problemId===continued&&a.runningSince!==null;},'Resume did not preserve the active problem and restart the timer');
+ console.log('PASS: Progress continues the next problem and resumes an active session');
  await click('[data-view="reviews"]');assert.match(await text(),/Previously used help/);
  await click('[data-view="map"]');assert.match(await text(),/0\/3 \+ review/);
  console.log('PASS: assisted solve, scheduled review, no unearned promotion');
