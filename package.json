@@ -1,0 +1,31 @@
+{
+  "name": "fieldwork",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build && tsc -p tsconfig.electron.json",
+    "start": "npm run build && electron .",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "package": "npm run build && electron-packager . Fieldwork --platform=darwin --arch=arm64 --out=release --overwrite --ignore=\"^/(src|tests|public|electron|release|node_modules|artifacts)(/|$)\""
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "@types/node": "^26.5.1",
+    "electron": "^44.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  },
+  "main": "dist-electron/main.js",
+  "description": "Daily Codeforces practice with strict per-category progression",
+  "author": "Marcellus",
+  "dependencies": {
+    "monaco-editor": "^0.56.0",
+    "monaco-vim": "^0.4.4"
+  }
+}
