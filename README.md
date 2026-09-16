@@ -48,6 +48,8 @@ Only the selected category receives credit. Historical accepts exclude problems 
 
 Most bands advance in 100-point increments. A category requires at least three problems at a rating to support a band. Sparse or missing bands are unavailable and never marked cleared. For example, the seeded catalog starts disjoint sets and shortest paths at 1100 and trees at 1200. Starting targets are not earned ratings. A category's last cleared band is shown separately.
 
+The review queue exposes saved reflections, blockers, and C++ source for every attempt, including older notes after a blank repeat. During a review session, revealing prior notes or code records help use. Finish-dialog drafts autosave and survive reloads.
+
 The planner rotates toward least recently practiced categories. It alternates overdue reviews and new problems so a review backlog cannot consume every session. Reviews return after 1 day for unfinished work, 2 days for assisted/unqualified attempts, then 7, 21, and 45 days after qualifying repeats. Parked problems are deferred for seven days. Off-band problems in the library remain available as free practice and cannot skip progression requirements.
 
 The practice bands are evidence of this training process, not predictions of contest rating or guaranteed interview readiness. Codeforces tags overlap; a tagged problem need not require every tagged technique. Codeforces-only work also leaves some interview-specific skills outside the scope of this app.
@@ -67,6 +69,8 @@ The practice bands are evidence of this training process, not predictions of con
 Electron saves progress atomically in `app.getPath('userData')/progress.json` (normally `~/Library/Application Support/fieldwork/` for a development launch). Export a JSON backup from Settings. Import validates the file and asks before replacing progress. No analytics, backend account, or hosted database is used.
 
 In Settings, enter a username and press **Enter** or **Save handle & sync**. The username stays editable after practice starts. Each handle keeps separate sessions, code, notes, and progression; switching back restores that account’s saved work. A failed sync leaves the tracked account unchanged.
+
+**Sync Codeforces** in the main sidebar refreshes the currently tracked account from any screen and shows the last sync time. It does not apply an unsaved username edit in Settings.
 
 **Save handle & sync** uses the public `user.info` and paginated `user.status` APIs. Requests are serialized with at least 2.1 seconds between calls. **Refresh official ratings** uses `problemset.problems`. The catalog is cached for offline browsing. Network errors preserve saved state. Logged attempts keep their original problem rating when the catalog changes.
 
