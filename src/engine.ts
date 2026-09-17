@@ -11,13 +11,19 @@ export function progress(state:State,topicId:string){
  const logs=state.logs.filter(l=>l.topicId===topicId).sort((a,b)=>a.finishedAt-b.finishedAt);
  const ladder=state.bands?.[topicId]||Array.from({length:28},(_,i)=>800+i*100);
  let band=ladder.find(r=>r>=state.initialBand)??state.initialBand, cleared:number|null=null, since=0;
- let fresh:Log[]=[],reviewed=false;
+ let fresh:{problemId:string;finishedAt:number}[]=[],reviewed=false;
  for(let round=0;round<35;round++){
   const relevant=logs.filter(l=>l.rating===band&&l.finishedAt>=since);
-  const earned=new Map<string,Log>();
+  const earned=new Map<string,{problemId:string;finishedAt:number}>();
   for(const l of relevant){
    const delayedRecall=!l.review||logs.some(previous=>previous.problemId===l.problemId&&l.startedAt-previous.finishedAt>=2*DAY);
    if(qualified(l)&&delayedRecall&&!earned.has(l.problemId))earned.set(l.problemId,l);
+  }
+  for(const credit of state.manualCredits||[]){
+   if(credit.topicId!==topicId||credit.rating!==band)continue;
+   const original=relevant.find(l=>l.problemId===credit.problemId);
+   const finishedAt=original?.finishedAt??credit.grantedAt;
+   if(!earned.has(credit.problemId)||earned.get(credit.problemId)!.finishedAt>finishedAt)earned.set(credit.problemId,{problemId:credit.problemId,finishedAt});
   }
   fresh=[...earned.values()];
   const reviews=relevant.filter(l=>l.review&&qualified(l)&&fresh.some(f=>f.problemId===l.problemId&&l.startedAt-f.finishedAt>=2*DAY));
@@ -26,7 +32,7 @@ export function progress(state:State,topicId:string){
   const third=fresh.sort((a,b)=>a.finishedAt-b.finishedAt)[2].finishedAt;
   since=Math.max(third,Math.min(...reviews.map(l=>l.finishedAt)));cleared=band;band=ladder.find(r=>r>band)??band+100;
  }
- return {band,cleared,fresh:Math.min(3,fresh.length),reviewed,attempts:logs.length,last:logs.at(-1)?.finishedAt||0};
+ return {band,cleared,since,counted:fresh.map(l=>l.problemId),fresh:Math.min(3,fresh.length),reviewed,attempts:logs.length,last:logs.at(-1)?.finishedAt||0};
 }
 export function reviews(state:State,now=Date.now()){
  const latest=new Map<string,Log>();
@@ -72,8 +78,9 @@ export function trackProfile(state:State,profile:Profile,now=Date.now()){
  const previous=state.profile.handle.toLowerCase(),next=profile.handle.toLowerCase();
  if(previous!==next){
   if(state.active){state.active.elapsed=elapsed(state.active,now);state.active.runningSince=null;}
-  state.accounts={...state.accounts,[previous]:structuredClone({initialBand:state.initialBand,logs:state.logs,active:state.active,deferred:state.deferred})};
+  state.accounts={...state.accounts,[previous]:structuredClone({initialBand:state.initialBand,logs:state.logs,active:state.active,deferred:state.deferred,manualCredits:state.manualCredits})};
   const restored=Object.hasOwn(state.accounts,next)?state.accounts[next]:null;
+  state.manualCredits=structuredClone(restored?.manualCredits??[]);
   state.initialBand=restored?.initialBand??800;state.logs=structuredClone(restored?.logs??[]);
   state.active=structuredClone(restored?.active??null);state.deferred={...restored?.deferred};
   if(state.active)state.active.runningSince=null;
@@ -84,8 +91,36 @@ export function validState(value:unknown):value is State {
  if(!value||typeof value!=='object')return false;const s=value as State;
  const validCatalog=!s.catalog||(typeof s.catalog.updatedAt==='string'&&Number.isFinite(Date.parse(s.catalog.updatedAt))&&Array.isArray(s.catalog.problems)&&s.catalog.problems.length>0&&s.catalog.problems.every(p=>typeof p.id==='string'&&typeof p.name==='string'&&Number.isFinite(p.contestId)&&typeof p.index==='string'&&Number.isFinite(p.rating)&&Number.isFinite(p.solvedCount)&&Array.isArray(p.tags)&&p.tags.every(t=>typeof t==='string')));
  const validAccounts=s.accounts===undefined||!!s.accounts&&typeof s.accounts==='object'&&!Array.isArray(s.accounts)&&Object.entries(s.accounts).every(([handle,account])=>/^[a-zA-Z0-9_.-]{3,24}$/.test(handle)&&!!account&&validState({...s,...account,accounts:undefined,catalog:undefined}));
- return validAccounts&&validCatalog&&s.version===1&&[30,45,60].includes(s.duration)&&[800,900,1000].includes(s.initialBand)&&Array.isArray(s.logs)&&s.logs.every(l=>
+ const validCredits=s.manualCredits===undefined||Array.isArray(s.manualCredits)&&s.manualCredits.every(c=>!!c&&typeof c.problemId==='string'&&topics.some(t=>t.id===c.topicId)&&Number.isFinite(c.rating)&&c.rating>=800&&Number.isFinite(c.grantedAt));
+ return validCredits&&validAccounts&&validCatalog&&s.version===1&&[30,45,60].includes(s.duration)&&[800,900,1000].includes(s.initialBand)&&Array.isArray(s.logs)&&s.logs.every(l=>
   typeof l.id==='string'&&typeof l.problemId==='string'&&topics.some(t=>t.id===l.topicId)&&Number.isFinite(l.rating)&&Number.isFinite(l.startedAt)&&Number.isFinite(l.finishedAt)&&l.finishedAt>=l.startedAt&&Number.isFinite(l.seconds)&&l.seconds>=0&&['independent','assisted','stuck'].includes(l.outcome)&&typeof l.notes==='string'&&typeof l.blocker==='string'&&typeof l.help==='boolean'&&typeof l.review==='boolean'&&typeof l.verified==='boolean'&&Array.isArray(l.checks)&&l.checks.length===3&&l.checks.every(x=>typeof x==='boolean'))&&
   !!s.profile&&typeof s.profile.handle==='string'&&Number.isFinite(Date.parse(s.profile.syncedAt))&&Array.isArray(s.profile.solved)&&s.profile.solved.every(p=>Number.isFinite(p.contestId)&&typeof p.index==='string'&&Array.isArray(p.tags)&&p.tags.every(t=>typeof t==='string'))&&!!s.profile.accepted&&typeof s.profile.accepted==='object'&&Object.values(s.profile.accepted).every(Number.isFinite)&&!!s.deferred&&typeof s.deferred==='object'&&Object.values(s.deferred).every(Number.isFinite)&&
   (s.active===null||!!s.active&&typeof s.active.problemId==='string'&&topics.some(t=>t.id===s.active!.topicId)&&Number.isFinite(s.active.rating)&&Number.isFinite(s.active.startedAt)&&Number.isFinite(s.active.elapsed)&&s.active.elapsed>=0&&(s.active.runningSince===null||Number.isFinite(s.active.runningSince))&&Number.isFinite(s.active.duration)&&typeof s.active.notes==='string'&&(s.active.reflectionDraft===undefined||!!s.active.reflectionDraft&&typeof s.active.reflectionDraft.notes==='string'&&typeof s.active.reflectionDraft.blocker==='string'&&['independent','assisted','stuck'].includes(s.active.reflectionDraft.outcome))&&typeof s.active.help==='boolean'&&typeof s.active.review==='boolean'&&Array.isArray(s.active.checks)&&s.active.checks.length===3&&s.active.checks.every(x=>typeof x==='boolean'));
+}
+
+export function completionEvidence(state:State,catalog:Problem[],topicId:string,band:number){
+ const topic=topics.find(t=>t.id===topicId)!,current=progress(state,topicId);
+ const since=current.band===band?current.since:0;
+ const logs=state.logs.filter(l=>l.topicId===topicId&&l.rating===band);
+ const historical=state.profile.solved.filter(p=>{const current=catalog.find(c=>c.id===key(p));return (p.rating??current?.rating)===band&&(p.tags.length?p.tags:current?.tags||[]).some(tag=>topic.tags.includes(tag));});
+ const credits=(state.manualCredits||[]).filter(c=>c.topicId===topicId&&c.rating===band);
+ const ids=new Set([...logs.map(l=>l.problemId),...historical.map(key),...credits.map(c=>c.problemId)]);
+ return [...ids].map(problemId=>{
+  const attempts=logs.filter(l=>l.problemId===problemId).sort((a,b)=>a.finishedAt-b.finishedAt);
+  const independent=attempts.find(l=>l.finishedAt>=since&&qualified(l)&&(!l.review||attempts.some(p=>l.startedAt-p.finishedAt>=2*DAY)));
+  const manual=credits.some(c=>c.problemId===problemId);
+  const l=attempts.at(-1),reasons:string[]=[];
+  if(!independent&&!manual){
+   if(!l)reasons.push('Imported accept: independence, time, and checks were not recorded');
+   else {
+    if(l.finishedAt<since)reasons.push('Attempt predates reaching this band');
+    if(l.outcome!=='independent'||l.help)reasons.push(l.outcome==='stuck'?'Logged as unfinished':'Help was recorded');
+    if(!l.verified)reasons.push('Acceptance not verified for this attempt');
+    if(l.seconds>1500)reasons.push('Over 25 minutes');
+    if(!l.checks.every(Boolean))reasons.push('Reasoning / test checks incomplete');
+    if(l.review&&!attempts.some(p=>l.startedAt-p.finishedAt>=2*DAY))reasons.push('Repeat was less than 48 hours after an earlier attempt');
+   }
+  }
+  return {problemId,name:catalog.find(p=>p.id===problemId)?.name||problemId,manual,automatic:!!independent,counted:manual||!!independent,reasons};
+ }).sort((a,b)=>Number(b.counted)-Number(a.counted)||a.problemId.localeCompare(b.problemId));
 }

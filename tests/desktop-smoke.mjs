@@ -161,6 +161,18 @@ try{
  assert.match(await text(),/Remember the invariant, including <bounds>/);
  await click('[data-review-filter="due"]');assert.match(await text(),/No reviews due now/);
  console.log('PASS: review reveals count as help and older reflections survive blank repeat attempts');
+ await click('[data-view="journal"]');await click('[data-evidence="implementation"]');
+ assert.match(await text(),/Count this solve/);
+ const creditId=await js('document.querySelector("[data-credit]:not([disabled])").dataset.credit');
+ await click(`[data-credit="${creditId}"]`);
+ assert.match(await text(),/Counted · Manual credit/);
+ await until(async()=>JSON.parse(await js('window.fieldwork.load()')).manualCredits?.length===1,'Manual credit did not persist');
+ win.webContents.reload();await until(async()=>(await text()).includes('Today'),'Reload after credit failed');
+ await click('[data-view="journal"]');await click('[data-evidence="implementation"]');
+ assert.match(await text(),/Counted · Manual credit/);
+ await click(`[data-credit="${creditId}"]`);
+ await until(async()=>JSON.parse(await js('window.fieldwork.load()')).manualCredits?.length===0,'Undo manual credit did not persist');
+ console.log('PASS: category evidence, manual completion credit, reload persistence and undo');
  assert.equal(errors.length,0,errors.join('\n'));
  console.log('Native integration checks passed. Screenshots saved in artifacts/.');
  await clipboard.writeText(originalClipboard);

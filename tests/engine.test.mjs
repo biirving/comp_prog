@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile,savedSolution} from '../src/engine.ts';
+import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile,savedSolution,completionEvidence} from '../src/engine.ts';
 import {topics} from '../src/topics.ts';
 const seed=JSON.parse(await readFile(new URL('../public/seed.json',import.meta.url)));
 const catalog=JSON.parse(await readFile(new URL('../public/catalog.json',import.meta.url))).problems;
@@ -42,4 +42,27 @@ test('latest real solution survives starter-only and empty repeat attempts',()=>
  const s=fresh();s.logs=[log({code:'int main(){return 42;}',finishedAt:DAY}),log({code:'template',finishedAt:2*DAY}),log({code:'',finishedAt:3*DAY})];
  assert.equal(savedSolution(s,'100A','template').code,'int main(){return 42;}');assert.equal(savedSolution(s,'101A','template'),undefined);
  assert.equal(savedSolution({...s,logs:[log({code:'template'})]},'100A','template'),undefined);
+});
+
+test('completion evidence explains blockers and includes imported accepts',()=>{
+ const s=fresh();s.profile.solved=[{contestId:101,index:'A',rating:800,tags:['implementation']}];s.logs=[log({verified:false,checks:[false,false,false],seconds:1600})];
+ const rows=completionEvidence(s,[],'implementation',800);assert.equal(rows.length,2);assert.equal(rows.find(r=>r.problemId==='100A').reasons.length,3);assert.match(rows.find(r=>r.problemId==='101A').reasons[0],/Imported accept/);
+});
+test('manual completion credits are distinct, reversible, category and rating specific',()=>{
+ const s=fresh();s.logs=[log({verified:false,help:true})];const original=structuredClone(s.logs);
+ s.manualCredits=[{problemId:'100A',topicId:'implementation',rating:800,grantedAt:DAY},{problemId:'100A',topicId:'implementation',rating:800,grantedAt:DAY}];
+ assert.equal(progress(s,'implementation').fresh,1);assert.equal(progress(s,'greedy').fresh,0);assert.deepEqual(s.logs,original);
+ assert.equal(completionEvidence(s,[],'implementation',800)[0].manual,true);s.manualCredits=[];assert.equal(progress(s,'implementation').fresh,0);
+ s.manualCredits=[{problemId:'100A',topicId:'implementation',rating:900,grantedAt:DAY}];assert.equal(progress(s,'implementation').fresh,0);
+});
+test('three manual solves still require delayed review to advance',()=>{
+ const s=fresh();s.logs=[log({verified:false})];s.manualCredits=['100A','101A','102A'].map(problemId=>({problemId,topicId:'implementation',rating:800,grantedAt:DAY}));
+ assert.equal(progress(s,'implementation').fresh,3);assert.equal(progress(s,'implementation').band,800);
+ s.logs.push(log({review:true,startedAt:4*DAY,finishedAt:4*DAY+1200000}));assert.equal(progress(s,'implementation').band,900);
+ s.manualCredits=[];assert.equal(progress(s,'implementation').band,800);
+});
+test('manual credits survive account switching and backup validation',()=>{
+ const s=fresh(),profile=structuredClone(s.profile);s.manualCredits=[{problemId:'100A',topicId:'implementation',rating:800,grantedAt:DAY}];assert.equal(validState(s),true);
+ trackProfile(s,{...profile,handle:'other_user'});assert.deepEqual(s.manualCredits,[]);trackProfile(s,profile);assert.equal(s.manualCredits.length,1);
+ assert.equal(validState({...s,manualCredits:[{bad:true}]}),false);
 });

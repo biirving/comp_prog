@@ -100,3 +100,7 @@ The desktop smoke test uses a temporary app-data directory, exercises the actual
 - `public/catalog.json`, `public/seed.json` — offline problem and account snapshots
 
 Problem statements remain on Codeforces; this app stores metadata and links to the official site.
+
+### Completion evidence and manual credit
+
+Click a category in Progress or “View completions & overrides” in the Skill map. Select a rating to inspect every recorded problem and matching imported accept, see which count and why others do not. “Count this solve” grants a distinct completion for that category and exact band; “Undo manual credit” recalculates progress. Credits are stored separately from attempts and Codeforces verification, included in backups, and isolated by account. They bypass the completion checks but retain the separate delayed-review requirement.
