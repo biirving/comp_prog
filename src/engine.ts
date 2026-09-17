@@ -30,12 +30,15 @@ export function progress(state:State,topicId:string){
 }
 export function reviews(state:State,now=Date.now()){
  const latest=new Map<string,Log>();
- for(const l of [...state.logs].sort((a,b)=>a.finishedAt-b.finishedAt))latest.set(l.topicId+':'+l.problemId,l);
+ for(const l of [...state.logs].sort((a,b)=>a.finishedAt-b.finishedAt))latest.set(l.problemId,l);
  return [...latest.values()].map(l=>{
-  const passes=state.logs.filter(x=>x.problemId===l.problemId&&x.topicId===l.topicId&&x.review&&qualified(x)).length;
+  const passes=state.logs.filter(x=>x.problemId===l.problemId&&x.review&&qualified(x)).length;
   const days=l.outcome==='stuck'?1:l.outcome==='assisted'||!qualified(l)?2:[2,7,21,45][Math.min(passes,3)];
   return {log:l,dueAt:l.finishedAt+days*DAY,due:l.finishedAt+days*DAY<=now};
  }).sort((a,b)=>a.dueAt-b.dueAt);
+}
+export function savedSolution(state:State,problemId:string,template:string){
+ return state.logs.filter(l=>l.problemId===problemId&&l.code?.trim()&&l.code.trim()!==template.trim()).sort((a,b)=>b.finishedAt-a.finishedAt)[0];
 }
 export function candidates(state:State,catalog:Problem[],topic:Topic,band:number,now=Date.now()){
  const excluded=new Set([...state.profile.solved.map(key),...state.logs.map(l=>l.problemId)]);

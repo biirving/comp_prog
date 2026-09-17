@@ -75,3 +75,5 @@ export function mountEditor(container:HTMLElement,code:string,onChange:(code:str
  editor.onDidDispose(()=>dom.removeEventListener('keydown',clipboardKey,true));
 }
 export function showDiagnostics(result:CompileResult){const model=editor?.getModel();if(!model)return;monaco.editor.setModelMarkers(model,'compiler',result.diagnostics.map(d=>({startLineNumber:d.line,endLineNumber:d.line,startColumn:d.column,endColumn:d.column+1,message:d.message,severity:d.severity==='error'?monaco.MarkerSeverity.Error:monaco.MarkerSeverity.Warning})));}
+
+export function replaceCode(code:string){const model=editor?.getModel();if(editor&&model){editor.pushUndoStop();editor.executeEdits('restore-solution',[{range:model.getFullModelRange(),text:code}]);editor.pushUndoStop();editor.focus();}}

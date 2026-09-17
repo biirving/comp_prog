@@ -48,6 +48,8 @@ Only the selected category receives credit. Historical accepts exclude problems 
 
 Most bands advance in 100-point increments. A category requires at least three problems at a rating to support a band. Sparse or missing bands are unavailable and never marked cleared. For example, the seeded catalog starts disjoint sets and shortest paths at 1100 and trees at 1200. Starting targets are not earned ratings. A category's last cleared band is shown separately.
 
+The review queue has one entry per problem across categories, with Due now, Upcoming, and All scheduled views. Accepted problems remain scheduled for spaced recall and are explicitly labeled. The latest nonempty, non-template solution is shown first and can be copied or loaded into the review editor with undo; loading counts as help. Codeforces sync does not import submission source.
+
 The review queue exposes saved reflections, blockers, and C++ source for every attempt, including older notes after a blank repeat. During a review session, revealing prior notes or code records help use. Finish-dialog drafts autosave and survive reloads.
 
 The planner rotates toward least recently practiced categories. It alternates overdue reviews and new problems so a review backlog cannot consume every session. Reviews return after 1 day for unfinished work, 2 days for assisted/unqualified attempts, then 7, 21, and 45 days after qualifying repeats. Parked problems are deferred for seven days. Off-band problems in the library remain available as free practice and cannot skip progression requirements.

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile} from '../src/engine.ts';
+import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile,savedSolution} from '../src/engine.ts';
 import {topics} from '../src/topics.ts';
 const seed=JSON.parse(await readFile(new URL('../public/seed.json',import.meta.url)));
 const catalog=JSON.parse(await readFile(new URL('../public/catalog.json',import.meta.url))).problems;
@@ -33,3 +33,13 @@ test('switching handles isolates verification and restores prior practice',()=>{
 });
 test('case-only handle updates do not reset progress',()=>{const s=fresh();s.logs=[log()];trackProfile(s,{...s.profile,handle:s.profile.handle.toUpperCase()});assert.equal(s.logs.length,1);assert.equal(s.accounts,undefined);});
 test('corrupt account archives are rejected on import',()=>{const s=fresh();assert.equal(validState({...s,accounts:{broken:{logs:[{bad:true}]}}}),false);});
+
+test('reviews deduplicate a problem across categories and use the latest schedule',()=>{
+ const s=fresh();s.logs=[log(),log({topicId:'greedy',finishedAt:3*DAY,startedAt:3*DAY-1000,review:true})];
+ const queue=reviews(s,3*DAY);assert.equal(queue.length,1);assert.equal(queue[0].log.topicId,'greedy');assert.equal(queue[0].due,false);assert.equal(queue[0].dueAt,10*DAY);
+});
+test('latest real solution survives starter-only and empty repeat attempts',()=>{
+ const s=fresh();s.logs=[log({code:'int main(){return 42;}',finishedAt:DAY}),log({code:'template',finishedAt:2*DAY}),log({code:'',finishedAt:3*DAY})];
+ assert.equal(savedSolution(s,'100A','template').code,'int main(){return 42;}');assert.equal(savedSolution(s,'101A','template'),undefined);
+ assert.equal(savedSolution({...s,logs:[log({code:'template'})]},'100A','template'),undefined);
+});
