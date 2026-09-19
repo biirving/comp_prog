@@ -24,7 +24,14 @@ function save(){
  const json=JSON.stringify(state);
  writes=writes.catch(()=>{}).then(()=>window.fieldwork?window.fieldwork.save(json):localStorage.setItem('fieldwork-v1',json)).catch(()=>{storageBroken=true;toast('Progress could not be saved. Export a backup from Settings before closing.');});
 }
-function openExternal(url:string){if(window.fieldwork)void window.fieldwork.open(url).catch(e=>toast(e.message));else window.open(url,'_blank','noopener,noreferrer');}
+function openExternal(url:string){
+ try{
+  const parsed=new URL(url);
+  if(parsed.hostname==='codeforces.com'&&parsed.pathname.startsWith('/problemset/problem/'))parsed.searchParams.set('locale','en');
+  url=parsed.href;
+ }catch{}
+ if(window.fieldwork)void window.fieldwork.open(url).catch(e=>toast(e.message));else window.open(url,'_blank','noopener,noreferrer');
+}
 function recommendation(){return plan(state,catalog.problems,Date.now(),focusTopic||undefined);}
 function problem(id:string){return catalog.problems.find(p=>p.id===id);}
 function problemLadderLink(id:string){const ladder=ladders.find(l=>l.steps.some(step=>step.codeforcesIds.includes(id)));return ladder?`<button class="text-button" data-ladder="${ladder.id}">Concept ladder ${icon('arrow')}</button>`:'';}
