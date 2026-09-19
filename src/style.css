@@ -11,3 +11,37 @@
 .review-filters{margin:0 0 24px;width:fit-content}.saved-solution{margin:16px 0 24px}.saved-solution .button{margin-right:8px}.attempt-log{margin-top:18px}
 
 .evidence-row{display:flex;align-items:center;gap:24px;padding:20px 0}.evidence-row+.evidence-row{border-top:1px solid var(--line)}.evidence-row p{margin-top:8px}.band-row .text-button{text-align:left;font-size:13px;white-space:normal}
+
+.category-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:24px 0}
+.category-stat{min-width:0;padding:20px 22px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}
+.category-stat strong{display:block;color:var(--bright);font-size:27px;font-weight:500;line-height:1.2;font-variant-numeric:tabular-nums}
+.category-stat span{display:block;margin-top:8px;color:var(--muted);font-size:12px;line-height:1.5}
+.category-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:24px 0}
+.category-controls>label{color:var(--muted);font-size:12px}
+.category-controls .search-field{min-width:180px}
+.category-controls input,.category-controls select{min-width:0;max-width:100%}
+.category-controls .segmented{flex-wrap:wrap}
+.category-problem-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:20px}
+.category-problem-card{min-width:0;padding:24px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+.problem-card-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:12px}
+.category-problem-card h2{margin:14px 0 12px;font-size:20px;line-height:1.4;overflow-wrap:anywhere}
+.problem-card-meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin:12px 0;color:var(--muted);font-size:12px;line-height:1.6;font-variant-numeric:tabular-nums}
+.problem-card-meta strong{color:var(--bright)}
+.completion-status{margin:16px 0;padding:12px 14px;background:var(--bg);border-radius:8px;color:var(--muted);font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.completion-status p{font-size:12px}
+.completion-status strong{color:var(--green)}
+.problem-card-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:18px 0}
+.problem-card-actions .button{max-width:100%;white-space:normal;text-align:center}
+.problem-attempts{min-width:0;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.problem-attempts>summary{font-size:13px;font-weight:600;color:var(--green)}
+.problem-attempts>summary span,.attempt-detail>summary span{float:none;margin-left:8px;font-size:11px;color:var(--muted)}
+.problem-attempts[open]>summary{margin-bottom:14px}
+.problem-attempts .attempt-detail{min-width:0;margin-top:10px;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:9px}
+.attempt-detail>summary{font-size:12px;overflow-wrap:anywhere}
+.attempt-facts{display:flex;flex-wrap:wrap;gap:8px 16px;list-style:none;margin:16px 0;padding:0;color:var(--muted);font-size:11px;line-height:1.6}
+.attempt-facts strong{color:#c2d1b6;font-weight:500}
+.attempt-notes{margin:14px 0;white-space:pre-wrap;overflow-wrap:anywhere;color:#c2d1b6;font-size:12px;line-height:1.7}
+.attempt-source{min-width:0;max-width:100%;margin:14px 0}
+pre.attempt-source,.attempt-source pre{max-width:100%;max-height:320px;overflow:auto;margin:12px 0;padding:14px;border:1px solid var(--line);border-radius:7px;background:#101712;color:#d4decf;white-space:pre;font:11px/1.7 Menlo,Monaco,monospace;user-select:text;tab-size:4}
+@media(max-width:1100px){.category-problem-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.category-summary{gap:8px}.category-stat{padding:14px 12px}.category-stat strong{font-size:23px}.category-stat span{font-size:11px}.category-problem-card{padding:20px}.category-controls{align-items:stretch}.category-controls .search-field{flex-basis:100%}.category-controls select{width:100%}.category-controls .segmented{width:100%}.category-controls .segmented button{flex:1}.category-problem-card h2{font-size:18px}.problem-attempts .attempt-detail{padding:12px}}

@@ -124,3 +124,31 @@ export function completionEvidence(state:State,catalog:Problem[],topicId:string,
   return {problemId,name:catalog.find(p=>p.id===problemId)?.name||problemId,manual,automatic:!!independent,counted:manual||!!independent,reasons};
  }).sort((a,b)=>Number(b.counted)-Number(a.counted)||a.problemId.localeCompare(b.problemId));
 }
+
+// Group saved practice by problem without treating imported accepts or drafts as attempts.
+export function categoryProblems(state:State,catalog:Problem[],topicId:string){
+ const topic=topics.find(t=>t.id===topicId);
+ if(!topic)return [];
+ const problems=new Map(catalog.map(p=>[p.id,p]));
+ const imports=new Map(state.profile.solved.map(p=>[key(p),p]));
+ const attemptsByProblem=new Map<string,Log[]>();
+ for(const attempt of state.logs){
+  if(attempt.topicId!==topicId)continue;
+  const attempts=attemptsByProblem.get(attempt.problemId)||[];
+  attempts.push(attempt);attemptsByProblem.set(attempt.problemId,attempts);
+ }
+ for(const attempts of attemptsByProblem.values())attempts.sort((a,b)=>b.finishedAt-a.finishedAt);
+ const credits=(state.manualCredits||[]).filter(c=>c.topicId===topicId);
+ const active=state.active?.topicId===topicId?state.active:null;
+ const matchingImports=state.profile.solved.filter(p=>(p.tags.length?p.tags:problems.get(key(p))?.tags||[]).some(tag=>topic.tags.includes(tag)));
+ const ids=new Set([...attemptsByProblem.keys(),...matchingImports.map(key),...credits.map(c=>c.problemId),...(active?[active.problemId]:[])]);
+ const evidenceByBand=new Map<number,Map<string,ReturnType<typeof completionEvidence>[number]>>();
+ return [...ids].map(problemId=>{
+  const problem=problems.get(problemId),attempts=attemptsByProblem.get(problemId)||[],imported=imports.get(problemId);
+  const draft=active?.problemId===problemId?active:null;
+  const credit=credits.filter(c=>c.problemId===problemId).sort((a,b)=>b.grantedAt-a.grantedAt)[0];
+  const rating=problem?.rating??attempts[0]?.rating??imported?.rating??draft?.rating??credit?.rating;
+  if(rating!==undefined&&!evidenceByBand.has(rating))evidenceByBand.set(rating,new Map(completionEvidence(state,catalog,topicId,rating).map(row=>[row.problemId,row])));
+  return {problemId,name:problem?.name||problemId,rating,attempts,active:draft,imported:!!imported,evidence:rating===undefined?undefined:evidenceByBand.get(rating)?.get(problemId)};
+ }).sort((a,b)=>Math.max(b.active?.startedAt||0,b.attempts[0]?.finishedAt||0)-Math.max(a.active?.startedAt||0,a.attempts[0]?.finishedAt||0)||a.problemId.localeCompare(b.problemId));
+}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile,savedSolution,completionEvidence} from '../src/engine.ts';
+import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile,savedSolution,completionEvidence,categoryProblems} from '../src/engine.ts';
 import {topics} from '../src/topics.ts';
 const seed=JSON.parse(await readFile(new URL('../public/seed.json',import.meta.url)));
 const catalog=JSON.parse(await readFile(new URL('../public/catalog.json',import.meta.url))).problems;
@@ -65,4 +65,36 @@ test('manual credits survive account switching and backup validation',()=>{
  const s=fresh(),profile=structuredClone(s.profile);s.manualCredits=[{problemId:'100A',topicId:'implementation',rating:800,grantedAt:DAY}];assert.equal(validState(s),true);
  trackProfile(s,{...profile,handle:'other_user'});assert.deepEqual(s.manualCredits,[]);trackProfile(s,profile);assert.equal(s.manualCredits.length,1);
  assert.equal(validState({...s,manualCredits:[{bad:true}]}),false);
+});
+
+test('category problem history groups retries newest-first and keeps category scope',()=>{
+ const s=fresh();s.profile.solved=[];
+ const first=log({id:'first',finishedAt:DAY,code:'first solution'}),retry=log({id:'retry',startedAt:3*DAY,finishedAt:3*DAY+1000,rating:900,code:'retry solution'});
+ s.logs=[first,log({id:'other-category',topicId:'greedy',finishedAt:4*DAY}),retry];
+ const original=structuredClone(s.logs),rows=categoryProblems(s,[],'implementation');
+ assert.equal(rows.length,1);assert.deepEqual(rows[0].attempts.map(a=>a.id),['retry','first']);assert.equal(rows[0].rating,900);assert.deepEqual(s.logs,original);
+ assert.equal(rows[0].attempts[1].code,'first solution');assert.equal(rows[0].evidence.counted,true);
+});
+test('active category draft is visible separately from completed attempts',()=>{
+ const s=fresh();s.profile.solved=[];s.logs=[log()];
+ s.active={...log({problemId:'200A',rating:1100}),elapsed:12,runningSince:null,duration:30,code:'draft'};
+ const rows=categoryProblems(s,[],'implementation'),draft=rows.find(p=>p.problemId==='200A');
+ assert.equal(rows.length,2);assert.equal(draft.attempts.length,0);assert.equal(draft.active.code,'draft');assert.equal(draft.rating,1100);assert.equal(draft.evidence,undefined);
+ assert.equal(categoryProblems(s,[],'greedy').length,0);
+ s.active.problemId='100A';assert.equal(categoryProblems(s,[],'implementation').length,1);assert.equal(categoryProblems(s,[],'implementation')[0].attempts.length,1);
+});
+test('imported accepts and manual-only credits appear with zero saved attempts across bands',()=>{
+ const s=fresh();s.profile.solved=[{contestId:101,index:'A',rating:1500,tags:['implementation']},{contestId:102,index:'A',tags:[]},{contestId:103,index:'A',rating:800,tags:['greedy']}];
+ s.manualCredits=[{problemId:'104A',topicId:'implementation',rating:1000,grantedAt:DAY},{problemId:'105A',topicId:'greedy',rating:800,grantedAt:DAY}];
+ const localCatalog=[{id:'102A',name:'Catalog name',contestId:102,index:'A',rating:1200,tags:['implementation'],solvedCount:100}];
+ const rows=categoryProblems(s,localCatalog,'implementation');assert.equal(rows.length,3);
+ assert.ok(rows.every(p=>p.attempts.length===0));assert.equal(rows.find(p=>p.problemId==='101A').rating,1500);assert.equal(rows.find(p=>p.problemId==='101A').imported,true);
+ assert.equal(rows.find(p=>p.problemId==='102A').name,'Catalog name');assert.equal(rows.find(p=>p.problemId==='102A').rating,1200);
+ const manual=rows.find(p=>p.problemId==='104A');assert.equal(manual.rating,1000);assert.equal(manual.imported,false);assert.equal(manual.evidence.manual,true);
+});
+test('catalog rating wins while historical attempts retain their original rating and source',()=>{
+ const s=fresh();s.profile.solved=[{contestId:100,index:'A',rating:800,tags:['implementation']}];s.logs=[log({rating:900})];
+ const rows=categoryProblems(s,[{id:'100A',name:'Updated problem',contestId:100,index:'A',rating:1000,tags:['implementation'],solvedCount:100}],'implementation');
+ assert.equal(rows.length,1);assert.equal(rows[0].rating,1000);assert.equal(rows[0].attempts[0].rating,900);assert.equal(rows[0].imported,true);assert.equal(rows[0].evidence,undefined);
+ assert.deepEqual(categoryProblems(s,[],'unknown-category'),[]);
 });

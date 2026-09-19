@@ -103,4 +103,8 @@ Problem statements remain on Codeforces; this app stores metadata and links to t
 
 ### Completion evidence and manual credit
 
-Click a category in Progress or “View completions & overrides” in the Skill map. Select a rating to inspect every recorded problem and matching imported accept, see which count and why others do not. “Count this solve” grants a distinct completion for that category and exact band; “Undo manual credit” recalculates progress. Credits are stored separately from attempts and Codeforces verification, included in backups, and isolated by account. They bypass the completion checks but retain the separate delayed-review requirement.
+Click a category in Progress or “View problems & attempts” in the Skill map. Select a rating to inspect every recorded problem and matching imported accept, see which count and why others do not. “Count this solve” grants a distinct completion for that category and exact band; “Undo manual credit” recalculates progress. Credits are stored separately from attempts and Codeforces verification, included in backups, and isolated by account. They bypass the completion checks but retain the separate delayed-review requirement.
+
+### Category problem grid
+
+Open a category from Progress or the Skill map to see one card per recorded problem, across all ratings by default. Cards show local attempt counts, imported acceptance, current drafts, and completion credit. Expand Attempt history, then a dated attempt, to read its result, time, reflection, blocker, and exact saved source; code can be copied per attempt. Rating and activity filters narrow the grid. Imported accepts have zero local attempts until you practice them in Fieldwork.
