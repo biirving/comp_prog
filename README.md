@@ -1,6 +1,6 @@
 # Fieldwork
 
-A personal **Electron + TypeScript** app for steady Codeforces practice. Seeded for `marcellus_at_syracuse`, with a cached catalog of 10,731 rated problems from September 14, 2026.
+A personal **Electron + TypeScript** app for steady Codeforces practice and LeetCode concept ladders. Seeded for `marcellus_at_syracuse`, with a cached catalog of 10,731 rated problems from September 14, 2026.
 
 ## Run
 
@@ -108,3 +108,11 @@ Click a category in Progress or “View problems & attempts” in the Skill map.
 ### Category problem grid
 
 Open a category from Progress or the Skill map to see one card per recorded problem, across all ratings by default. Cards show local attempt counts, imported acceptance, current drafts, and completion credit. Expand Attempt history, then a dated attempt, to read its result, time, reflection, blocker, and exact saved source; code can be copied per attempt. Rating and activity filters narrow the grid. Imported accepts have zero local attempts until you practice them in Fieldwork.
+
+## LeetCode and concept ladders
+
+Enter a LeetCode username in Settings, then use Save username & sync or the sidebar Sync LeetCode button. Requests go directly to LeetCode’s public GraphQL endpoint, with no password, cookies, or third-party proxy. Sync retrieves full difficulty totals and the latest 20 public accepted submissions; repeated snapshots accumulate observed problems for the same username. Older unseen solves and source code are not imported. A failure preserves the saved snapshot; changing usernames never merges their accepted histories.
+
+Concept ladders contain eight curated three-step paths: lookups/prefix counts, windows, binary search, stacks, traversal, DP, trees, and greedy intervals. Each step explains its prerequisite and the next conceptual change, provides a recall prompt, and links directly to LeetCode and selected Codeforces transfer exercises. All exercises in a step must be observed as accepted or personally marked practiced before the suggested step moves forward; steps remain freely browsable. LeetCode practice marks are scoped to the current username (or an unlinked local profile) and can be undone. Codeforces ratings and promotion rules remain separate from LeetCode difficulty and ladder practice.
+
+Linked official problem pages are the source for LeetCode titles and difficulties; mappings are curated practice relationships, not difficulty equivalences. The public profile query is an undocumented website endpoint and may change or become unavailable.

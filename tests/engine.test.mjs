@@ -98,3 +98,9 @@ test('catalog rating wins while historical attempts retain their original rating
  assert.equal(rows.length,1);assert.equal(rows[0].rating,1000);assert.equal(rows[0].attempts[0].rating,900);assert.equal(rows[0].imported,true);assert.equal(rows[0].evidence,undefined);
  assert.deepEqual(categoryProblems(s,[],'unknown-category'),[]);
 });
+
+test('backup validates LeetCode profiles and ladder marks without requiring them',()=>{
+ const s=fresh();assert.equal(validState(s),true);
+ s.leetcode={username:'learner',syncedAt:new Date().toISOString(),totals:{all:1,easy:1,medium:0,hard:0},accepted:{'two-sum':{title:'Two Sum',timestamp:1000}}};s.ladderPractice={'lc:learner:two-sum':true};assert.equal(validState(s),true);
+ assert.equal(validState({...s,leetcode:{username:'broken'}}),false);assert.equal(validState({...s,ladderPractice:{'lc:x:y':'yes'}}),false);
+});

@@ -1,5 +1,6 @@
 import {defineConfig} from 'vite';
 import {fileURLToPath} from 'node:url';
+import {fetchLeetCode} from './electron/leetcode.ts';
 let lastCall=0;let queue:Promise<unknown>=Promise.resolve();
 function api(method:string,params:Record<string,string>){const next=queue.then(async()=>{await new Promise(r=>setTimeout(r,Math.max(0,2100-(Date.now()-lastCall))));lastCall=Date.now();const r=await fetch(`https://codeforces.com/api/${method}?${new URLSearchParams(params)}`,{signal:AbortSignal.timeout(20000)});if(!r.ok)throw new Error('Codeforces unavailable');const j=await r.json();if(j.status!=='OK')throw new Error('Codeforces rejected the request. Check your handle.');return j.result;});queue=next.catch(()=>{});return next;}
 export default defineConfig({base:'/',resolve:{alias:[
@@ -8,9 +9,10 @@ export default defineConfig({base:'/',resolve:{alias:[
  {find:/^monaco-editor\/esm\/vs\//,replacement:'monaco-editor/'}
 ]},server:{port:5173,strictPort:true},plugins:[{name:'public-codeforces-preview',configureServer(server){server.middlewares.use('/api',async(req,res,next)=>{
  const url=new URL(req.url||'/','http://localhost');
- if(!['/codeforces','/catalog'].includes(url.pathname))return next();
+ if(!['/codeforces','/catalog','/leetcode'].includes(url.pathname))return next();
  res.setHeader('Content-Type','application/json');
  try{
+ if(url.pathname==='/leetcode')return res.end(JSON.stringify(await fetchLeetCode(url.searchParams.get('username')||'')));
  if(url.pathname==='/catalog'){const data=await api('problemset.problems',{});const counts=new Map(data.problemStatistics.map((p:any)=>[`${p.contestId}${p.index}`,p.solvedCount]));return res.end(JSON.stringify({updatedAt:new Date().toISOString(),problems:data.problems.filter((p:any)=>p.rating&&p.contestId&&!p.tags.includes('*special')).map((p:any)=>({...p,id:`${p.contestId}${p.index}`,solvedCount:counts.get(`${p.contestId}${p.index}`)||0}))}));}
  const handle=url.searchParams.get('handle')||'';if(!/^[a-zA-Z0-9_.-]{3,24}$/.test(handle)){res.statusCode=400;return res.end(JSON.stringify({error:'Enter a valid Codeforces handle.'}));}
  const [user]=await api('user.info',{handles:handle});const solved=new Map(),accepted:Record<string,number>={};let submissionCount=0;

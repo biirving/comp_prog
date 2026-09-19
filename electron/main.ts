@@ -1,12 +1,13 @@
 import { app, BrowserWindow, ipcMain, shell, protocol, net, session, clipboard } from 'electron';
 import {checkCpp} from './compiler.js';
+import {fetchLeetCode} from './leetcode.js';
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 protocol.registerSchemesAsPrivileged([{scheme:'fieldwork',privileges:{standard:true,secure:true,supportFetchAPI:true}}]);
 let window: BrowserWindow | null = null;
-const allowedHosts = new Set(['codeforces.com','youkn0wwho.academy','cp-algorithms.com']);
+const allowedHosts = new Set(['codeforces.com','youkn0wwho.academy','cp-algorithms.com','leetcode.com']);
 function trusted(event: Electron.IpcMainInvokeEvent) {
  if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !event.senderFrame.url.startsWith('fieldwork://app/')) throw new Error('Untrusted request');
 }
@@ -35,6 +36,7 @@ app.whenReady().then(async () => {
  });
  session.defaultSession.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
  ipcMain.handle('cpp:check',async(event,code:unknown)=>{trusted(event);return checkCpp(code);});
+ ipcMain.handle('lc:sync',async(event,username:unknown)=>{trusted(event);if(typeof username!=='string')throw new Error('Enter a valid LeetCode username.');return fetchLeetCode(username,net.fetch);});
  ipcMain.handle('code:copy',async(event,code:unknown)=>{trusted(event);if(typeof code!=='string'||code.length>500000)throw new Error('Invalid source');await clipboard.writeText(code);});
  ipcMain.handle('code:paste',async event=>{trusted(event);const text=await clipboard.readText();if(text.length>500000)throw new Error('Clipboard text must be under 500 KB.');return text;});
  ipcMain.handle('state:load',async event=>{trusted(event);try{return await readFile(path.join(app.getPath('userData'),'progress.json'),'utf8');}catch(e){if((e as NodeJS.ErrnoException).code==='ENOENT')return null;throw e;}});
