@@ -188,6 +188,14 @@ try{
  await click(`[data-credit="${creditId}"]`);
  await until(async()=>JSON.parse(await js('window.fieldwork.load()')).manualCredits?.length===0,'Undo manual credit did not persist');
  console.log('PASS: category evidence, manual completion credit, reload persistence and undo');
+ const activeBeforeCategory=JSON.parse(await js('window.fieldwork.load()')).active;
+ await click('[data-view="map"]');await click('[data-category-card="implementation"] h3');
+ assert.ok(await js('!!document.querySelector(".category-problem-grid")'));
+ assert.deepEqual(JSON.parse(await js('window.fieldwork.load()')).active,activeBeforeCategory);
+ await click('[data-view="map"]');await click('[data-category-card="implementation"] > [data-evidence]');
+ assert.ok(await js('!!document.querySelector("#category-scope")'));
+ assert.deepEqual(JSON.parse(await js('window.fieldwork.load()')).active,activeBeforeCategory);
+ console.log('PASS: Skill map category card and primary action open history without starting a problem');
  await click('[data-view="ladders"]');
  assert.equal(await js('document.querySelectorAll("[data-ladder]").length'),8);
  await click('[data-ladder="window-patterns"]');
