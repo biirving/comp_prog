@@ -11,7 +11,7 @@ const icon=(name:string)=>`<svg width="19" height="19" viewBox="0 0 24 24" fill=
 const formatTime=(n:number)=>`${Math.floor(Math.max(0,n)/60).toString().padStart(2,'0')}:${Math.floor(Math.max(0,n)%60).toString().padStart(2,'0')}`;
 const shortDate=(n:number)=>new Date(n).toLocaleDateString(undefined,{month:'short',day:'numeric'});
 const link=(url:string,label:string)=>`<a href="${escape(url)}" data-external="${escape(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-let state:State,catalog:Catalog,view='today',filterTopic='',filterRating='all',filterStatus='unsolved',query='',focusTopic='',busy=false,reflection=false,storageBroken=false;
+let state:State,catalog:Catalog,canonicalCatalog:Catalog,view='today',filterTopic='',filterRating='all',filterStatus='unsolved',query='',focusTopic='',busy=false,reflection=false,storageBroken=false;
 let handleDraft:string|null=null;
 let reviewFilter='due';
 let leetcodeDraft:string|null=null,leetcodeBusy=false,selectedLadder='';
@@ -34,6 +34,10 @@ function openExternal(url:string){
 }
 function recommendation(){return plan(state,catalog.problems,Date.now(),focusTopic||undefined);}
 function problem(id:string){return catalog.problems.find(p=>p.id===id);}
+function englishCatalog(data:Catalog):Catalog{
+ const names=new Map(canonicalCatalog?.problems.map(p=>[p.id,p.name])||[]);
+ return {...data,problems:data.problems.map(p=>({...p,name:names.get(p.id)||p.name}))};
+}
 function problemLadderLink(id:string){const ladder=ladders.find(l=>l.steps.some(step=>step.codeforcesIds.includes(id)));return ladder?`<button class="text-button" data-ladder="${ladder.id}">Concept ladder ${icon('arrow')}</button>`:'';}
 function rated(p:Problem){return `<span class="rating">${p.rating}</span>`;}
 function status(p:Problem){return state.profile.solved.some(s=>key(s)===p.id)?'Accepted':state.logs.some(l=>l.problemId===p.id)?'Practiced':'Unseen';}
@@ -156,7 +160,7 @@ async function sync(current=false){
 async function refreshCatalog(){if(busy)return;busy=true;render();try{
  const updated=window.fieldwork?await window.fieldwork.catalog():await fetch('/api/catalog').then(async r=>{if(!r.ok)throw new Error('Catalog refresh is unavailable. Open the Electron app or try again later.');return r.json();});
  if(!Array.isArray(updated.problems)||!updated.problems.length)throw new Error('The refreshed catalog was empty. Existing problems are preserved.');
- catalog=updated;state.catalog=catalog;state.bands=ratingLadders(catalog.problems);save();toast('Official problem ratings refreshed. Logged attempts keep their original rating.');
+ catalog=englishCatalog(updated);state.catalog=catalog;state.bands=ratingLadders(catalog.problems);save();toast('Official problem ratings refreshed. Logged attempts keep their original rating.');
  }catch(e){toast((e as Error).message);}finally{busy=false;render();}}
 function finish(){
  const a=state.active!;const outcome=$<HTMLSelectElement>('#outcome').value as Outcome;const seconds=elapsed(a);
@@ -249,18 +253,18 @@ function bind(){
  const input=$<HTMLInputElement>('#import');if(input)input.onchange=async()=>{
   const file=input.files?.[0];if(!file)return;
   try{if(file.size>20_000_000)throw new Error('Backup is too large.');const imported:unknown=JSON.parse(await file.text());if(!validState(imported))throw new Error('This is not a valid Fieldwork backup. Current progress was not changed.');
-   if(confirm('Replace your current progress with this backup? Export your current data first if you want to keep it.')){state=imported;catalog=state.catalog||catalog;state.bands=ratingLadders(catalog.problems);if(state.active){state.active.runningSince=null;}storageBroken=false;save();render();toast('Backup restored. Any active timer is paused.');}
+   if(confirm('Replace your current progress with this backup? Export your current data first if you want to keep it.')){state=imported;catalog=state.catalog?englishCatalog(state.catalog):catalog;state.bands=ratingLadders(catalog.problems);if(state.active){state.active.runningSince=null;}storageBroken=false;save();render();toast('Backup restored. Any active timer is paused.');}
   }catch(e){toast((e as Error).message);}input.value='';
  };
 }
 function updateClock(){if(!state?.active)return;const a=state.active,n=elapsed(a);const timer=$('#timer');if(timer)timer.textContent=formatTime(a.duration*60-n);const caption=$('#timer-caption');if(caption)caption.textContent=n>=a.duration*60?'Your planned session is complete. Finish or extend.':`${a.duration}-minute session · ${a.runningSince===null?'paused':'in progress'}`;$('#checkpoint')?.classList.toggle('hidden',n<25*60);}
 async function boot(){
  try{
-  const [catalogData,seed]=await Promise.all([fetch('/catalog.json').then(r=>r.json()),fetch('/seed.json').then(r=>r.json())]);catalog=catalogData;
+  const [catalogData,seed]=await Promise.all([fetch('/catalog.json').then(r=>r.json()),fetch('/seed.json').then(r=>r.json())]);canonicalCatalog=catalogData;catalog=catalogData;
   const blank:State={version:1,duration:30,initialBand:800,profile:{...seed,accepted:seed.accepted||{}},logs:[],active:null,deferred:{}};
   const raw=window.fieldwork?await window.fieldwork.load():localStorage.getItem('fieldwork-v1');
   if(raw){const parsed:unknown=JSON.parse(raw);if(!validState(parsed))throw new Error('Your saved progress could not be read. It has not been overwritten. Restore a valid backup after preserving the original progress file.');state=parsed;}else state=blank;
-  if(state.catalog)catalog=state.catalog;
+  if(state.catalog)catalog=englishCatalog(state.catalog);
   state.bands=ratingLadders(catalog.problems);
   if(state.active?.runningSince){state.active.elapsed=elapsed(state.active);state.active.runningSince=null;save();}
   render();setInterval(updateClock,1000);
