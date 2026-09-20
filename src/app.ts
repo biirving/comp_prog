@@ -6,6 +6,7 @@ import {topics,topicById,academyUrl} from './topics';
 import {progress,reviews,plan,elapsed,localDay,qualified,key,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile,savedSolution,completionEvidence,categoryProblems,repeatCandidate} from './engine';
 import type {State,Problem,Catalog,Profile,Outcome} from './types';
 const $=<T extends HTMLElement=HTMLElement>(selector:string)=>document.querySelector<T>(selector)!;
+const BUILD_ID='2026-09-20.1';
 const escape=(value:unknown)=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const icon=(name:string)=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${({sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',map:'<path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Zm6-2v16m6-14v16"/>',book:'<path d="M12 5C9 3 5 3 2 4v15c4-1 7 0 10 2 3-2 6-3 10-2V4c-3-1-7-1-10 1Zm0 0v16"/>',repeat:'<path d="m17 2 4 4-4 4M3 11V8a2 2 0 0 1 2-2h16M7 22l-4-4 4-4m14-1v3a2 2 0 0 1-2 2H3"/>',chart:'<path d="M4 3v17h17M8 15v-4m5 4V7m5 8V5"/>',settings:'<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="16" cy="17" r="3" fill="var(--surface)"/>',arrow:'<path d="M4 12h16m-6-6 6 6-6 6"/>',external:'<path d="M14 3h7v7m0-7L10 14M10 3H4v17h17v-6"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',check:'<path d="m5 12 4 4L19 6"/>',play:'<path d="m9 5 11 7-11 7Z"/>',leaf:'<path d="M19 3C5 2 3 9 6 15s14 4 13-12ZM5 21 15 9"/>',download:'<path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/>'} as Record<string,string>)[name]||''}</svg>`;
 const formatTime=(n:number)=>`${Math.floor(Math.max(0,n)/60).toString().padStart(2,'0')}:${Math.floor(Math.max(0,n)%60).toString().padStart(2,'0')}`;
@@ -260,6 +261,7 @@ function bind(){
 function updateClock(){if(!state?.active)return;const a=state.active,n=elapsed(a);const timer=$('#timer');if(timer)timer.textContent=formatTime(a.duration*60-n);const caption=$('#timer-caption');if(caption)caption.textContent=n>=a.duration*60?'Your planned session is complete. Finish or extend.':`${a.duration}-minute session · ${a.runningSince===null?'paused':'in progress'}`;$('#checkpoint')?.classList.toggle('hidden',n<25*60);}
 async function boot(){
  try{
+  document.title=`Fieldwork · ${BUILD_ID}`;
   const [catalogData,seed]=await Promise.all([fetch('/catalog.json').then(r=>r.json()),fetch('/seed.json').then(r=>r.json())]);canonicalCatalog=catalogData;catalog=catalogData;
   const blank:State={version:1,duration:30,initialBand:800,profile:{...seed,accepted:seed.accepted||{}},logs:[],active:null,deferred:{}};
   const raw=window.fieldwork?await window.fieldwork.load():localStorage.getItem('fieldwork-v1');
