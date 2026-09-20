@@ -70,6 +70,20 @@ export function plan(state:State,catalog:Problem[],now=Date.now(),onlyTopic?:str
  }
  return null;
 }
+export function repeatCandidate(state:State,catalog:Problem[],topicId:string,now=Date.now()){
+ const topic=topics.find(t=>t.id===topicId);if(!topic)return undefined;
+ const p=progress(state,topicId);if(p.fresh<3)return undefined;
+ const logs=state.logs.filter(l=>l.topicId===topicId&&l.rating===p.band);
+ const qualifying=logs.filter(l=>qualified(l)&&!l.review).sort((a,b)=>a.finishedAt-b.finishedAt);
+ for(const first of qualifying){
+  const repeated=logs.some(l=>l.problemId===first.problemId&&l.review&&qualified(l)&&l.startedAt-first.finishedAt>=2*DAY);
+  if(!repeated&&now>=first.finishedAt+2*DAY){
+   const problem=catalog.find(candidate=>candidate.id===first.problemId);
+   if(problem)return {problem,first};
+  }
+ }
+ return undefined;
+}
 export function elapsed(active:Active,now=Date.now()){return active.elapsed+(active.runningSince===null?0:Math.max(0,(now-active.runningSince)/1000));}
 export function localDay(timestamp:number){const d=new Date(timestamp);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 export function verifyLogs(state:State){

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile,savedSolution,completionEvidence,categoryProblems} from '../src/engine.ts';
+import {progress,plan,reviews,qualified,elapsed,verifyLogs,validState,DAY,candidates,ratingLadders,trackProfile,savedSolution,completionEvidence,categoryProblems,repeatCandidate} from '../src/engine.ts';
 import {topics} from '../src/topics.ts';
 const seed=JSON.parse(await readFile(new URL('../public/seed.json',import.meta.url)));
 const catalog=JSON.parse(await readFile(new URL('../public/catalog.json',import.meta.url))).problems;
@@ -65,6 +65,16 @@ test('manual credits survive account switching and backup validation',()=>{
  const s=fresh(),profile=structuredClone(s.profile);s.manualCredits=[{problemId:'100A',topicId:'implementation',rating:800,grantedAt:DAY}];assert.equal(validState(s),true);
  trackProfile(s,{...profile,handle:'other_user'});assert.deepEqual(s.manualCredits,[]);trackProfile(s,profile);assert.equal(s.manualCredits.length,1);
  assert.equal(validState({...s,manualCredits:[{bad:true}]}),false);
+});
+test('repeat candidate selects an eligible delayed prior solve',()=>{
+ const s=fresh(),first=log({problemId:'282A',finishedAt:DAY,startedAt:DAY-1200000}),second=log({problemId:'231A',finishedAt:DAY+1000,startedAt:DAY-1199000}),third=log({problemId:'263A',finishedAt:DAY+2000,startedAt:DAY-1198000});
+ s.logs=[first,second,third];assert.equal(repeatCandidate(s,catalog,'implementation',DAY+2*DAY)?.problem.id,'282A');
+ s.logs.push(log({problemId:'282A',review:true,startedAt:DAY+2*DAY,finishedAt:DAY+2*DAY+1200000}));
+ s.logs.push(log({problemId:'231A',review:true,startedAt:DAY+2*DAY,finishedAt:DAY+2*DAY+1200000}));
+ s.logs.push(log({problemId:'263A',review:true,startedAt:DAY+2*DAY,finishedAt:DAY+2*DAY+1200000}));assert.equal(repeatCandidate(s,catalog,'implementation',DAY+4*DAY),undefined);
+});
+test('repeat candidate stays unavailable before three completions or 48 hours',()=>{
+ const s=fresh();s.logs=[log({problemId:'282A'}),log({problemId:'231A'}),log({problemId:'263A'})];assert.equal(repeatCandidate(s,catalog,'implementation',DAY+DAY),undefined);for(const l of s.logs)l.finishedAt=9*DAY;assert.equal(repeatCandidate(s,catalog,'implementation',10*DAY),undefined);
 });
 
 test('category problem history groups retries newest-first and keeps category scope',()=>{
