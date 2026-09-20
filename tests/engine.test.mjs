@@ -74,7 +74,7 @@ test('repeat candidate selects an eligible delayed prior solve',()=>{
  s.logs.push(log({problemId:'263A',review:true,startedAt:DAY+2*DAY,finishedAt:DAY+2*DAY+1200000}));assert.equal(repeatCandidate(s,catalog,'implementation',DAY+4*DAY),undefined);
 });
 test('repeat candidate stays unavailable before three completions or 48 hours',()=>{
- const s=fresh();s.logs=[log({problemId:'282A'}),log({problemId:'231A'}),log({problemId:'263A'})];assert.equal(repeatCandidate(s,catalog,'implementation',DAY+DAY),undefined);for(const l of s.logs)l.finishedAt=9*DAY;assert.equal(repeatCandidate(s,catalog,'implementation',10*DAY),undefined);
+ const s=fresh();s.logs=[log({problemId:'282A'}),log({problemId:'231A'}),log({problemId:'263A'})];assert.equal(repeatCandidate(s,catalog,'implementation',DAY+DAY)?.ready,false);for(const l of s.logs)l.finishedAt=9*DAY;assert.equal(repeatCandidate(s,catalog,'implementation',10*DAY)?.ready,false);
 });
 
 test('category problem history groups retries newest-first and keeps category scope',()=>{

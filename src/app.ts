@@ -177,7 +177,7 @@ function bind(){
  const evidenceRating=$<HTMLSelectElement>('#evidence-band');if(evidenceRating)evidenceRating.onchange=()=>{evidenceBand=evidenceRating.value;render();};
  const scope=$<HTMLSelectElement>('#category-scope');if(scope)scope.onchange=()=>{categoryScope=scope.value;render();};
  document.querySelectorAll<HTMLElement>('[data-category-practice]').forEach(el=>el.onclick=()=>{const p=problem(el.dataset.categoryPractice!);if(p)begin(p,evidenceTopic,state.logs.some(l=>l.problemId===p.id)||state.profile.solved.some(s=>key(s)===p.id));});
- document.querySelectorAll<HTMLElement>('[data-repeat]').forEach(el=>el.onclick=()=>{const topicId=el.dataset.repeat!,candidate=repeatCandidate(state,catalog.problems,topicId);if(candidate)begin(candidate.problem,topicId,true);else toast('This category does not have an eligible repeat yet.');});
+ document.querySelectorAll<HTMLElement>('[data-repeat]').forEach(el=>el.onclick=()=>{const topicId=el.dataset.repeat!,candidate=repeatCandidate(state,catalog.problems,topicId);if(candidate){begin(candidate.problem,topicId,true);if(!candidate.ready)toast('Repeat started early. It can count after the original solve is at least 48 hours old.');}else toast('Complete three problems before starting a repeat.');});
  document.querySelectorAll<HTMLElement>('[data-credit]').forEach(el=>el.onclick=()=>{
   const id=el.dataset.credit!,band=Number(el.dataset.creditBand),row=completionEvidence(state,catalog.problems,evidenceTopic,band).find(r=>r.problemId===id);if(!row)return;
   const credits=state.manualCredits||[];

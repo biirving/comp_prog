@@ -77,10 +77,16 @@ export function repeatCandidate(state:State,catalog:Problem[],topicId:string,now
  const qualifying=logs.filter(l=>qualified(l)&&!l.review).sort((a,b)=>a.finishedAt-b.finishedAt);
  for(const first of qualifying){
   const repeated=logs.some(l=>l.problemId===first.problemId&&l.review&&qualified(l)&&l.startedAt-first.finishedAt>=2*DAY);
-  if(!repeated&&now>=first.finishedAt+2*DAY){
+  if(!repeated){
    const problem=catalog.find(candidate=>candidate.id===first.problemId);
-   if(problem)return {problem,first};
+   if(problem)return {problem,first,ready:now>=first.finishedAt+2*DAY};
   }
+ }
+ for(const credit of state.manualCredits||[]){
+  if(credit.topicId!==topicId||credit.rating!==p.band)continue;
+  const repeated=logs.some(l=>l.problemId===credit.problemId&&l.review&&qualified(l));
+  const problem=catalog.find(candidate=>candidate.id===credit.problemId);
+  if(!repeated&&problem)return {problem,first:undefined,ready:false};
  }
  return undefined;
 }
