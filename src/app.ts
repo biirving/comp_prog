@@ -193,7 +193,7 @@ function bind(){
  document.querySelectorAll<HTMLElement>('[data-view]').forEach(el=>el.onclick=()=>{if(view==='session'&&state.active?.runningSince!==null&&state.active){state.active.elapsed=elapsed(state.active);state.active.runningSince=null;save();}view=el.dataset.view!;reflection=false;render();window.scrollTo(0,0);});
  document.querySelectorAll<HTMLElement>('[data-external]').forEach(el=>el.onclick=e=>{e.preventDefault();openExternal(el.dataset.external!);});
  document.querySelectorAll<HTMLElement>('[data-duration]').forEach(el=>el.onclick=()=>{state.duration=Number(el.dataset.duration);save();render();});
- document.querySelectorAll<HTMLElement>('[data-train]').forEach(el=>el.onclick=()=>{focusTopic=el.dataset.train!;const next=recommendation();if(next)begin(next.problem,next.topic.id,next.review);else toast('No unseen problem at this exact band. Refresh the catalog or choose a review.');});
+ document.querySelectorAll<HTMLElement>('[data-train]').forEach(el=>el.onclick=()=>{const topicId=el.dataset.train!,topic=topicById(topicId),level=progress(state,topicId),fresh=candidates(state,catalog.problems,topic,level.band);if(fresh.length){focusTopic=topicId;begin(fresh[0],topicId,false);return;}focusTopic=topicId;const next=recommendation();if(next)begin(next.problem,next.topic.id,next.review);else toast('No unseen problem at the updated band. Refresh the catalog or choose a review.');});
  document.querySelectorAll<HTMLElement>('[data-pick]').forEach(el=>el.onclick=()=>{
   const p=problem(el.dataset.pick!)!;const t=filterTopic?topicById(filterTopic):topics.find(t=>p.tags.some(tag=>t.tags.includes(tag)));
   if(!t){toast('This problem has no mapped category. Choose another problem.');return;}
