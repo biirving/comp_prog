@@ -63,7 +63,7 @@ app.whenReady().then(async () => {
   return {handle:user.handle,rating:user.rating??null,maxRating:user.maxRating??null,solved:[...solved.values()],accepted,submissionCount,syncedAt:new Date().toISOString()};
  });
  ipcMain.handle('cf:catalog',async event=>{
-  trusted(event);const result=await api('problemset.problems',{});
+  trusted(event);const result=await api('problemset.problems',{lang:'en'});
   const counts=new Map(result.problemStatistics.map((p:any)=>[`${p.contestId}${p.index}`,p.solvedCount]));
   return {updatedAt:new Date().toISOString(),problems:result.problems.filter((p:any)=>p.rating&&p.contestId&&!p.tags.includes('*special')).map((p:any)=>({...p,id:`${p.contestId}${p.index}`,solvedCount:counts.get(`${p.contestId}${p.index}`)||0}))};
  });
